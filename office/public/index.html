@@ -18,7 +18,10 @@
   <main id="stage">
     <div id="scene"></div>
     <div id="hud">
-      <h1>AI Marketing Office</h1>
+      <div>
+        <h1>AI Marketing Office</h1>
+        <div class="sub">Resonance of Indonesia · Instagram ideation</div>
+      </div>
       <span id="status" class="pill idle">Connecting…</span>
     </div>
   </main>
@@ -28,11 +31,32 @@
       <div id="team"></div>
     </section>
     <nav id="tabs">
-      <button data-tab="reports" class="active">Manager reports <span id="reports-count">0</span></button>
-      <button data-tab="activity">Activity <span id="activity-count">0</span></button>
+      <button data-tab="chat" class="active">Chat</button>
+      <button data-tab="reports">Reports <span id="reports-count">0</span></button>
+      <button data-tab="activity">Activity <span id="activity-count">0</span><span id="ig-count" class="ig-count" hidden></span></button>
     </nav>
-    <section id="reports" class="tab active"></section>
-    <section id="activity" class="tab"></section>
+    <section id="chat" class="tab active">
+      <div class="chat-bar">
+        <span id="chat-state">Ready</span>
+        <button id="chat-reset" class="link">New chat</button>
+      </div>
+      <div id="chat-log"></div>
+      <form id="composer">
+        <textarea id="chat-input" rows="2" placeholder="Give the team an instruction… (Enter to send, Shift+Enter for a new line)"></textarea>
+        <div class="composer-actions">
+          <button type="button" id="chat-stop" hidden>Stop</button>
+          <button type="submit" id="chat-send">Send</button>
+        </div>
+      </form>
+    </section>
+    <section id="reports" class="tab"></section>
+    <section id="activity" class="tab">
+      <div class="filters">
+        <button data-filter="all" class="chip active">All</button>
+        <button data-filter="ig" class="chip ig">ROI Instagram updates</button>
+      </div>
+      <div id="activity-list"></div>
+    </section>
   </aside>
   <script type="module" src="app.js"></script>
 </body>
