@@ -1,1 +1,45 @@
-
+{
+  "_comment": "Team structure for the AI Marketing Office. A file is routed to the first division whose folder prefix matches its path (\"*\" = anything not matched elsewhere). Inside the division, the first employee whose keyword appears in the file name (or whose tools list contains the tool; a trailing * is a prefix wildcard) gets the task; otherwise the first employee does. The project currently has no work folders yet, so the folders below are the suggested layout; edit freely.",
+  "divisions": [
+    {
+      "id": "content",
+      "name": "Content",
+      "color": "#7c9cff",
+      "folders": ["content", "blog", "copy"],
+      "employees": [
+        { "name": "Maya", "role": "Content Writer", "keywords": ["idea", "blog", "post", "article", "draft"] },
+        { "name": "Leo", "role": "Copy Editor", "keywords": ["copy", "edit", "tone", "style"] }
+      ]
+    },
+    {
+      "id": "ads",
+      "name": "Paid Ads",
+      "color": "#ff9f7c",
+      "folders": ["ads", "campaigns"],
+      "employees": [
+        { "name": "Ava", "role": "Ads Specialist", "keywords": ["ad", "campaign", "creative"] },
+        { "name": "Sam", "role": "Budget Planner", "keywords": ["budget", "bid", "spend", "roi"] }
+      ]
+    },
+    {
+      "id": "analytics",
+      "name": "Analytics & Research",
+      "color": "#5cc8a8",
+      "folders": ["analytics", "reports", "research", "data"],
+      "employees": [
+        { "name": "Nora", "role": "Data Analyst", "keywords": ["report", "metric", "kpi", "csv", "data"] },
+        { "name": "Raj", "role": "Researcher", "keywords": ["research", "competitor", "market"], "tools": ["WebSearch", "WebFetch"] }
+      ]
+    },
+    {
+      "id": "ops",
+      "name": "Marketing Ops",
+      "color": "#c49cff",
+      "folders": ["*"],
+      "employees": [
+        { "name": "Theo", "role": "Web Developer", "keywords": [".js", ".html", ".css", ".ts", "server"] },
+        { "name": "Iris", "role": "Ops Engineer", "keywords": ["config", "settings", ".json", "hook", "package"], "tools": ["Bash", "Task", "Agent", "mcp__*"] }
+      ]
+    }
+  ]
+}

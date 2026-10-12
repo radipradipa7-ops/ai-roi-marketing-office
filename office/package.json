@@ -1,0 +1,6 @@
+{
+  "name": "ai-marketing-office",
+  "private": true,
+  "type": "commonjs",
+  "scripts": { "start": "node server.js" }
+}
