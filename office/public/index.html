@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Marketing Office</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect x=%222%22 y=%223%22 width=%2212%22 height=%228%22 rx=%221%22 fill=%22%234f7cff%22/%3E%3Crect x=%227%22 y=%2211%22 width=%222%22 height=%223%22 fill=%22%237a8396%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "./vendor/three.module.min.js",
+        "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js",
+        "three/addons/renderers/CSS2DRenderer.js": "./vendor/CSS2DRenderer.js"
+    } }
+  </script>
+</head>
+<body>
+  <main id="stage">
+    <div id="scene"></div>
+    <div id="hud">
+      <h1>AI Marketing Office</h1>
+      <span id="status" class="pill idle">Connecting…</span>
+    </div>
+  </main>
+  <aside id="panel">
+    <section id="team-section">
+      <h2>Team</h2>
+      <div id="team"></div>
+    </section>
+    <nav id="tabs">
+      <button data-tab="reports" class="active">Manager reports <span id="reports-count">0</span></button>
+      <button data-tab="activity">Activity <span id="activity-count">0</span></button>
+    </nav>
+    <section id="reports" class="tab active"></section>
+    <section id="activity" class="tab"></section>
+  </aside>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
