@@ -1,45 +1,53 @@
 {
-  "_comment": "Team structure for the AI Marketing Office. A file is routed to the first division whose folder prefix matches its path (\"*\" = anything not matched elsewhere). Inside the division, the first employee whose keyword appears in the file name (or whose tools list contains the tool; a trailing * is a prefix wildcard) gets the task; otherwise the first employee does. The project currently has no work folders yet, so the folders below are the suggested layout; edit freely.",
+  "_comment": "AI Marketing Office team for the Resonance of Indonesia (ROI) Instagram ideation extension. Routing: (1) a file inside a division's folder goes to that division's employee whose keyword is in the file name, else the division's `default`; (2) otherwise the first employee (any division) whose keyword is in the file name; (3) otherwise the employee whose `tools` include the tool (trailing * = wildcard); (4) otherwise `fallback`. `watch` rules highlight file changes in the Activity feed and Manager reports. `chat` controls how the chat panel runs Claude Code.",
+  "fallback": "Manager",
   "divisions": [
     {
-      "id": "content",
-      "name": "Content",
-      "color": "#7c9cff",
-      "folders": ["content", "blog", "copy"],
+      "id": "insights",
+      "name": "Insights Lab",
+      "color": "#3fa98c",
+      "folders": ["research", "trends", "metrics", "analytics", "data", "reports", "insights"],
+      "default": "Researcher",
       "employees": [
-        { "name": "Maya", "role": "Content Writer", "keywords": ["idea", "blog", "post", "article", "draft"] },
-        { "name": "Leo", "role": "Copy Editor", "keywords": ["copy", "edit", "tone", "style"] }
+        { "name": "Researcher", "role": "Finds trends and market opportunities", "keywords": ["trend", "opportunit", "market", "competitor", "research", "audience"], "tools": ["WebSearch", "WebFetch"] },
+        { "name": "Analyst", "role": "Tracks performance and audience retention", "keywords": ["metric", "retention", "analytic", "performance", "kpi", "report", "stats", "insight", ".csv", ".xlsx"] }
       ]
     },
     {
-      "id": "ads",
-      "name": "Paid Ads",
-      "color": "#ff9f7c",
-      "folders": ["ads", "campaigns"],
+      "id": "creative",
+      "name": "Creative Studio",
+      "color": "#e8835a",
+      "folders": ["hooks", "scripts", "copy", "captions", "content", "stories"],
+      "default": "Copywriter",
       "employees": [
-        { "name": "Ava", "role": "Ads Specialist", "keywords": ["ad", "campaign", "creative"] },
-        { "name": "Sam", "role": "Budget Planner", "keywords": ["budget", "bid", "spend", "roi"] }
+        { "name": "Hook Writer", "role": "Creates viral hooks and creative angles", "keywords": ["hook", "angle", "viral", "opener", "headline"] },
+        { "name": "Copywriter", "role": "Writes scripts and narrative storytelling", "keywords": ["script", "story", "narrative", "caption", "copy", "voiceover"] }
       ]
     },
     {
-      "id": "analytics",
-      "name": "Analytics & Research",
-      "color": "#5cc8a8",
-      "folders": ["analytics", "reports", "research", "data"],
+      "id": "production",
+      "name": "Production & Ops",
+      "color": "#7b8cf0",
+      "folders": ["design", "assets", "thumbnails", "visuals", "calendar", "planning", "office", ".claude"],
+      "default": "Manager",
       "employees": [
-        { "name": "Nora", "role": "Data Analyst", "keywords": ["report", "metric", "kpi", "csv", "data"] },
-        { "name": "Raj", "role": "Researcher", "keywords": ["research", "competitor", "market"], "tools": ["WebSearch", "WebFetch"] }
-      ]
-    },
-    {
-      "id": "ops",
-      "name": "Marketing Ops",
-      "color": "#c49cff",
-      "folders": ["*"],
-      "employees": [
-        { "name": "Theo", "role": "Web Developer", "keywords": [".js", ".html", ".css", ".ts", "server"] },
-        { "name": "Iris", "role": "Ops Engineer", "keywords": ["config", "settings", ".json", "hook", "package"], "tools": ["Bash", "Task", "Agent", "mcp__*"] }
+        { "name": "Designer", "role": "Builds visuals, assets and thumbnails", "keywords": ["thumbnail", "visual", "asset", "design", "cover", "carousel", "mockup", "moodboard", ".png", ".jpg", ".svg"] },
+        { "name": "Manager", "role": "Runs the content calendar, planning and workflows", "keywords": ["calendar", "plan", "schedule", "workflow", "brief", "roadmap", "timeline", "config", "settings", "claude.md", "readme"], "tools": ["Bash", "Task", "Agent", "TodoWrite", "mcp__*"] }
       ]
     }
-  ]
+  ],
+  "watch": [
+    {
+      "id": "roi-ig",
+      "name": "ROI Instagram Updates",
+      "color": "#d6337f",
+      "folders": ["instagram", "ig", "metrics", "templates", "drafts", "ig-drafts"],
+      "keywords": ["ig_", "instagram", "reel", "carousel"]
+    }
+  ],
+  "chat": {
+    "permissionMode": "acceptEdits",
+    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite"],
+    "maxTurns": 40
+  }
 }
