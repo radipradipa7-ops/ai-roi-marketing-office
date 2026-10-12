@@ -306,6 +306,10 @@ const server = http.createServer((req, res) => {
     res.end(data);
   });
 });
+server.on('error', (e) => {
+  console.error(e.code === 'EADDRINUSE' ? `[office] Port ${PORT} is already in use. Is the office already running? Use OFFICE_PORT=xxxx to pick another port.` : `[office] ${e.message}`);
+  process.exit(1);
+});
 server.listen(PORT, HOST, () => console.log(`[office] AI Marketing Office → http://localhost:${PORT}  (log: ${path.relative(ROOT, LOG_FILE)})`));
 
 module.exports = { routeAction, labelFor, buildReport, matchWatch };
