@@ -6,7 +6,7 @@ for giving the team instructions. Built as an ideation extension for the Resonan
 ## Run
 
 ```bash
-node office/server.js        # then open http://localhost:4317
+npm start                    # or: node office/server.js — then open http://localhost:4317
 ```
 
 No `npm install` needed: the server has no dependencies, and Three.js is vendored in `public/vendor/`.
@@ -48,5 +48,3 @@ Use `OFFICE_PORT=xxxx` to change the port.
 `CLAUDE.md` gives every Claude Code run the ROI context (ideation only, hand-off to the human team) and the folder
 conventions that make routing work.
 
-Note: the root `package.json` is currently empty, which makes Node refuse to run any script under the project root.
-`office/package.json` shields the office scripts from that, so the root file was left untouched.

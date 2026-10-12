@@ -1,1 +1,9 @@
-
+{
+  "name": "ai-roi-marketing-office",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Marketing Office: a live 3D view and chat for the Resonance of Indonesia Instagram ideation team, driven by Claude Code hooks.",
+  "scripts": {
+    "start": "node office/server.js"
+  }
+}
