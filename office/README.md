@@ -24,8 +24,9 @@ Use `OFFICE_PORT=xxxx` to change the port.
    Files outside the project are logged by base name only. The hook prints nothing and always exits 0, in about 50 ms.
 2. **Server** (`office/server.js`) tails the log, routes each action to an employee, builds the Manager's report
    on every `Stop`, and streams everything over Server-Sent Events (`/events`).
-3. **Team config** (`office-config.json`): six ROI roles in three rooms. Researcher and Analyst are in the Insights Lab,
-   Hook Writer and Copywriter in the Creative Studio, Designer and Manager in Production & Ops. Routing, in order:
+3. **Team config** (`office-config.json`): nine roles in four rooms. Researcher and Analyst are in the Insights Lab,
+   Hook Writer and Copywriter in the Creative Studio, Designer and Manager in Production & Ops, and the Sales Manager,
+   Account Executive and Customer Success in the Sales Team. Routing, in order:
    - a file inside a division's folder goes to that division's employee whose keyword is in the file name, else to the division's `default`;
    - otherwise to the first employee whose keyword is in the file name;
    - otherwise to the employee whose `tools` include the tool (`mcp__*` is a prefix wildcard);
@@ -41,9 +42,15 @@ Use `OFFICE_PORT=xxxx` to change the port.
    `.office/chat.json`. By default Claude may read, write, and edit files and search the web here, but not run shell
    commands; change that under `chat` in the config. Claude Code must be installed and logged in (`claude` on your PATH).
    The chat endpoints only accept requests that carry a random token the page receives from this server.
-6. **Page** (`office/public/`): monitors and glow panels light up only while an employee has a real action in the
-   current turn. They switch off 3 s after `Stop`, or after 2 min with no events (an interrupted turn fires no `Stop`).
-   On each report, the Manager walks out of their room to your desk.
+6. **Page** (`office/public/`: `app.js` plus `js/kit.js` props, `js/people.js` characters, `js/rooms.js` rooms,
+   `js/nav.js` walking routes). Four team rooms, a Break Room (kitchen, table, couch) and your office, connected by
+   corridors and doors. Monitors and task labels light up only while an employee has a real action in the current
+   turn. They switch off 3 s after `Stop`, or after 2 min with no events (an interrupted turn fires no `Stop`).
+   On each report, the Manager walks to your office.
+7. **Idle life**: once the office has been quiet for about 10 s, up to three people at a time get coffee, sit at
+   the table or on the couch, or visit a colleague's desk, showing only a 💬 bubble. This is ambient animation: it
+   never creates tasks, feed entries or reports, and the status still says Idle. As soon as you send a chat message
+   or Claude Code starts working, everyone hurries back to their desk.
 
 `CLAUDE.md` gives every Claude Code run the ROI context (ideation only, hand-off to the human team) and the folder
 conventions that make routing work.
