@@ -5,6 +5,7 @@ Everything produced here is a draft that the real-world team reviews, edits, and
 
 ## Ground rules
 - Ideation only. Never post, publish, schedule, email, deploy, or push anything to an external service.
+  Sales outputs (pitches, outreach, proposals) are drafts too: never contact prospects or clients.
 - Write outputs as Markdown (or CSV for data) in the folders below, so the office routes them to the right desk.
 - Use clear, descriptive file names that contain the role keyword, e.g. `hooks/viral_hooks_week3.md`.
 - Don't overwrite existing team files unless asked; create a new versioned file instead (`_v2`).
@@ -20,6 +21,9 @@ Everything produced here is a draft that the real-world team reviews, edits, and
 | Designer | Visual briefs, thumbnails, carousel layouts, moodboards | `design/`, `assets/` | thumbnail, visual, carousel |
 | Analyst | Performance and audience-retention analysis | `metrics/`, `reports/` | metrics, retention, kpi |
 | Manager | Content calendar, planning, workflow | `calendar/`, `planning/` | calendar, plan, brief |
+| Sales Manager | Sales targets and KPIs, sales analytics, team coaching | `sales/` | target, forecast, playbook |
+| Account Executive | Prospect research, pitches, demos, proposals, negotiation notes | `sales/`, `proposals/`, `pitches/` | pitch, proposal, deal, outreach |
+| Customer Success | Onboarding, support, retention, upsell and cross-sell plans | `sales/`, `clients/` | onboarding, retention, upsell |
 
 ## ROI Instagram updates (tracked hand-off area)
 Changes here are highlighted in the office's Activity feed and the Manager's reports, because they go to the human team:

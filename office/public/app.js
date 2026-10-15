@@ -1,14 +1,24 @@
 // AI Marketing Office: 3D view + side panel (team, chat, reports, activity).
-// Everything shown is driven by server events, which come from the Claude Code
-// hook log and the chat relay. Nothing is randomized: with no events, the
-// office stays idle.
+// Work state (monitors, task labels, feed, reports) is driven only by server
+// events from the Claude Code hook log and the chat relay; with no events,
+// nobody is working. While the office is idle, people move around on their own
+// (coffee, couch, chatting). That ambient motion never shows tasks or words,
+// and stops the moment work arrives: everyone hurries back to their desk.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { M, box, label, rug, floorPlant } from './js/kit.js';
+import { createPerson, animatePerson, lookFor } from './js/people.js';
+import { ROOM_W, ROOM_D, teamRoom, breakRoom, bossOffice } from './js/rooms.js';
+import { Nav } from './js/nav.js';
 
 const IDLE_AFTER_MS = 120_000; // no events for 2 min → treat turn as over (e.g. interrupted, no Stop)
 const OFF_DELAY_MS = 3_000;    // monitors stay on briefly after the turn ends
 const MAX_FEED = 300;
+const GAP = 2.8;               // corridor width between rooms
+const WALK = 1.5, RUN = 11;    // m/s: idle stroll vs. hurrying back for a task
+const CALM_MS = 10_000;        // quiet time after work before anyone wanders off
+const MAX_AWAY = 3;            // at most this many people away from their desks
 
 // ---------- state ----------
 const state = {
@@ -48,15 +58,15 @@ const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.42;
-controls.minDistance = 12;
-controls.maxDistance = 90;
+controls.minDistance = 10;
+controls.maxDistance = 110;
 
 scene.add(new THREE.HemisphereLight('#fffaf2', '#e3dccf', 1.5));
 const sun = new THREE.DirectionalLight('#fff6ea', 1.5);
-sun.position.set(16, 30, 18);
+sun.position.set(18, 34, 22);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -40, right: 40, top: 40, bottom: -40 });
+Object.assign(sun.shadow.camera, { left: -32, right: 32, top: 26, bottom: -26 });
 sun.shadow.radius = 5;
 sun.shadow.bias = -0.0004;
 scene.add(sun);
@@ -64,235 +74,10 @@ scene.add(sun);
 const office = new THREE.Group();
 scene.add(office);
 
-const matCache = new Map();
-function mat(color, extra = {}) {
-  const k = color + JSON.stringify(extra);
-  if (!matCache.has(k)) matCache.set(k, new THREE.MeshStandardMaterial({ color, roughness: 0.75, ...extra }));
-  return matCache.get(k);
-}
-const M = {
-  ground: mat('#ece4d8', { roughness: 0.95 }),
-  wall: mat('#fbfaf7', { roughness: 0.9 }),
-  deskTop: mat('#e4d2b8', { roughness: 0.55 }),
-  metal: mat('#b9bec8', { roughness: 0.35, metalness: 0.6 }),
-  dark: mat('#2a2f38', { roughness: 0.4 }),
-  keyboard: mat('#f2f2f0', { roughness: 0.5 }),
-  skin: mat('#efcaa9'),
-  pot: mat('#c9744f', { roughness: 0.85 }),
-  leaf: mat('#5f9e6e', { roughness: 0.8 }),
-  leafDark: mat('#4a8259', { roughness: 0.8 }),
-  mug: mat('#ffffff', { roughness: 0.35 }),
-  coffee: mat('#5a3a26', { roughness: 0.3 }),
-};
-
-function box(w, h, d, material, x = 0, y = 0, z = 0, shadow = true) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  m.position.set(x, y, z);
-  m.castShadow = shadow; m.receiveShadow = true;
-  return m;
-}
-function cyl(rt, rb, h, material, x = 0, y = 0, z = 0, seg = 20) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), material);
-  m.position.set(x, y, z);
-  m.castShadow = true; m.receiveShadow = true;
-  return m;
-}
-function label(className, text, parent, y) {
-  const el = document.createElement('div');
-  el.className = className;
-  el.textContent = text;
-  const obj = new CSS2DObject(el);
-  obj.position.set(0, y, 0);
-  parent.add(obj);
-  return { el, obj };
-}
-
-// ---------- props ----------
-function person(color) {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.5, 4, 14), mat(color));
-  body.position.y = 0.95; body.castShadow = true;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 22, 16), M.skin);
-  head.position.y = 1.7; head.castShadow = true;
-  g.add(body, head);
-  g.userData.head = head;
-  return g;
-}
-
-function chair(color, executive = false) {
-  const g = new THREE.Group();
-  const seatMat = mat(color, { roughness: 0.7 });
-  g.add(box(0.62, 0.1, 0.6, seatMat, 0, 0.5, 0));
-  g.add(box(0.62, executive ? 1.0 : 0.62, 0.1, seatMat, 0, executive ? 1.02 : 0.86, 0.27));
-  g.add(cyl(0.04, 0.04, 0.36, M.metal, 0, 0.27, 0, 10));
-  g.add(box(0.62, 0.04, 0.07, M.metal, 0, 0.08, 0));
-  g.add(box(0.07, 0.04, 0.62, M.metal, 0, 0.08, 0));
-  return g;
-}
-
-function mug(color) {
-  const g = new THREE.Group();
-  g.add(cyl(0.07, 0.065, 0.16, mat(color, { roughness: 0.35 }), 0, 0.08, 0, 16));
-  const top = cyl(0.062, 0.062, 0.01, M.coffee, 0, 0.155, 0, 16);
-  top.castShadow = false;
-  g.add(top);
-  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.012, 8, 16), mat(color, { roughness: 0.35 }));
-  handle.position.set(0.08, 0.085, 0);
-  g.add(handle);
-  return g;
-}
-
-function plant(scale = 1) {
-  const g = new THREE.Group();
-  g.add(cyl(0.11 * scale, 0.08 * scale, 0.18 * scale, M.pot, 0, 0.09 * scale, 0, 14));
-  const leaves = [[0, 0.32, 0, 0.14, M.leaf], [0.07, 0.26, 0.04, 0.1, M.leafDark], [-0.07, 0.27, -0.03, 0.1, M.leafDark]];
-  for (const [x, y, z, r, m] of leaves) {
-    const l = new THREE.Mesh(new THREE.IcosahedronGeometry(r * scale, 0), m);
-    l.position.set(x * scale, y * scale, z * scale);
-    l.castShadow = true;
-    g.add(l);
-  }
-  return g;
-}
-
-function floorPlant() {
-  const g = new THREE.Group();
-  g.add(cyl(0.28, 0.22, 0.5, mat('#e9e4dc', { roughness: 0.6 }), 0, 0.25, 0, 18));
-  const leaves = [[0, 1.0, 0, 0.4], [0.18, 0.75, 0.1, 0.3], [-0.17, 0.8, -0.08, 0.3], [0.05, 1.3, -0.05, 0.25]];
-  leaves.forEach(([x, y, z, r], i) => {
-    const l = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), i % 2 ? M.leafDark : M.leaf);
-    l.position.set(x, y, z); l.castShadow = true;
-    g.add(l);
-  });
-  return g;
-}
-
-// A workstation. The screen faces the camera (+z); the employee sits on the
-// +z side with their back to the camera, looking at it.
-function desk(color, index) {
-  const g = new THREE.Group();
-  g.add(box(2.2, 0.07, 1.05, M.deskTop, 0, 0.78, 0));
-  g.add(box(0.05, 0.75, 0.9, M.metal, -1.02, 0.375, 0));
-  g.add(box(0.05, 0.75, 0.9, M.metal, 1.02, 0.375, 0));
-  g.add(box(0.45, 0.55, 0.85, mat('#efe6d8', { roughness: 0.6 }), 0.72, 0.3, -0.05)); // drawer pedestal
-  // monitor
-  g.add(box(0.36, 0.03, 0.22, M.dark, 0, 0.83, -0.25));
-  g.add(box(0.06, 0.3, 0.05, M.dark, 0, 0.98, -0.28));
-  g.add(box(1.12, 0.68, 0.06, M.dark, 0, 1.44, -0.25));
-  const screenMat = new THREE.MeshStandardMaterial({ color: '#39404c', emissive: new THREE.Color(color), emissiveIntensity: 0, roughness: 0.25 });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 0.58), screenMat);
-  screen.position.set(0, 1.44, -0.215);
-  g.add(screen);
-  // soft glow panel in front of the screen, visible only while active
-  const glowMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.0), glowMat);
-  glow.position.set(0, 1.44, -0.2);
-  g.add(glow);
-  const ledMat = new THREE.MeshBasicMaterial({ color: '#c9ced8' });
-  const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), ledMat);
-  led.position.set(0.5, 1.13, -0.215);
-  g.add(led);
-  // keyboard + mouse
-  g.add(box(0.62, 0.02, 0.2, M.keyboard, -0.05, 0.825, 0.18));
-  g.add(box(0.07, 0.02, 0.11, M.keyboard, 0.4, 0.825, 0.2));
-  // decorations (deterministic by desk position, never random)
-  const m = mug(index % 2 ? '#ffffff' : color);
-  m.position.set(-0.85, 0.815, 0.12);
-  g.add(m);
-  if (index % 2 === 0) { const p = plant(1); p.position.set(0.82, 0.815, -0.32); g.add(p); }
-  else { const p = plant(0.8); p.position.set(-0.82, 0.815, -0.3); g.add(p); }
-  // chair + seated person
-  const c = chair(new THREE.Color(color).lerp(new THREE.Color('#3a3f4a'), 0.45).getStyle());
-  c.position.set(0, 0, 1.0);
-  g.add(c);
-  const p = person(color);
-  p.position.set(0, -0.12, 1.02);
-  p.rotation.y = Math.PI;
-  g.add(p);
-  return { group: g, screenMat, glowMat, ledMat, figure: p };
-}
-
 // ---------- build office from config ----------
-const ROOM_W = 11, ROOM_D = 8, GAP = 2.6, DOOR = 2.4, WALL_H = 0.9;
-let manager = null, boss = null, bossDesk = null;
+const agents = [];
+let nav = null, breakSpots = null, bossRoom = null, bossAgent = null, managerAgent = null;
 const bounds = { w: 30, zMin: -5, zMax: 10 };
-
-function roomShell(room, d) {
-  const accent = new THREE.Color(d.color || '#9aa7c7');
-  const tint = accent.clone().lerp(new THREE.Color('#f6efe4'), 0.88);
-  const floor = box(ROOM_W, 0.04, ROOM_D, mat(tint.getStyle(), { roughness: 0.9 }), 0, 0.02, 0, false);
-  room.add(floor);
-  const cap = mat(accent.clone().lerp(new THREE.Color('#ffffff'), 0.25).getStyle(), { roughness: 0.6 });
-  const wall = (w, d_, x, z) => {
-    room.add(box(w, WALL_H, d_, M.wall, x, WALL_H / 2, z));
-    room.add(box(w + 0.02, 0.05, d_ + 0.02, cap, x, WALL_H + 0.025, z));
-  };
-  wall(ROOM_W, 0.14, 0, -ROOM_D / 2);
-  wall(0.14, ROOM_D, -ROOM_W / 2, 0);
-  wall(0.14, ROOM_D, ROOM_W / 2, 0);
-  const side = (ROOM_W - DOOR) / 2;
-  wall(side, 0.14, -(DOOR / 2 + side / 2), ROOM_D / 2); // front wall with a door opening
-  wall(side, 0.14, DOOR / 2 + side / 2, ROOM_D / 2);
-  // accent board on the back wall
-  room.add(box(3.2, 0.5, 0.04, mat(accent.getStyle(), { roughness: 0.5 }), 0, 0.55, -ROOM_D / 2 + 0.1));
-  const fp = floorPlant();
-  fp.position.set(ROOM_W / 2 - 0.6, 0, ROOM_D / 2 - 0.7);
-  room.add(fp);
-  const tag = new THREE.Object3D();
-  tag.position.set(-DOOR / 2 - 1.6, 0.25, ROOM_D / 2 + 0.55); // entrance sign, clear of desk labels
-  room.add(tag);
-  label('room-tag', d.name, tag, 0);
-}
-
-function buildBossArea(x, z) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  office.add(g);
-  g.add(box(7.5, 0.03, 4.6, mat('#3d4656', { roughness: 0.95 }), 0, 0.015, 0, false)); // rug
-  g.add(box(7.1, 0.035, 4.2, mat('#4a5466', { roughness: 0.95 }), 0, 0.02, 0, false));
-  // sleek desk: walnut slab on two panel legs
-  const walnut = mat('#5b4334', { roughness: 0.45 });
-  g.add(box(3.4, 0.09, 1.3, walnut, 0, 0.8, 0));
-  g.add(box(0.08, 0.76, 1.15, M.dark, -1.55, 0.38, 0));
-  g.add(box(0.08, 0.76, 1.15, M.dark, 1.55, 0.38, 0));
-  g.add(box(3.1, 0.45, 0.04, M.dark, 0, 0.5, 0.5)); // modesty panel
-  // dual monitors (lit while the team is working on your request)
-  const screens = [];
-  for (const x of [-0.6, 0.6]) {
-    g.add(box(0.05, 0.28, 0.05, M.dark, x, 0.98, -0.32));
-    g.add(box(1.05, 0.62, 0.05, M.dark, x, 1.4, -0.32));
-    const sm = new THREE.MeshStandardMaterial({ color: '#39404c', emissive: new THREE.Color('#9fb1ff'), emissiveIntensity: 0, roughness: 0.25 });
-    const s = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.54), sm);
-    s.position.set(x, 1.4, -0.29);
-    s.rotation.y = x < 0 ? 0.12 : -0.12;
-    g.add(s);
-    screens.push(sm);
-  }
-  g.add(box(0.6, 0.02, 0.18, M.keyboard, 0, 0.855, 0.15));
-  const m = mug('#2a2f38'); m.position.set(1.2, 0.845, 0.2); g.add(m);
-  const nameplate = box(0.5, 0.1, 0.06, mat('#c9a96e', { roughness: 0.3, metalness: 0.6 }), -1.15, 0.9, 0.45);
-  g.add(nameplate);
-  // executive chair behind the desk; boss faces the room (and the camera)
-  const ch = chair('#23272f', true);
-  ch.rotation.y = Math.PI;
-  ch.position.set(0, 0, -1.15);
-  g.add(ch);
-  const b = person('#2f3a4f');
-  b.position.set(0, -0.12, -1.05);
-  g.add(b);
-  // shelf + plants
-  const shelf = new THREE.Group();
-  shelf.add(box(1.6, 1.3, 0.4, mat('#f3efe8', { roughness: 0.7 }), 0, 0.65, 0));
-  ['#e8835a', '#7b8cf0', '#3fa98c', '#d6337f', '#c9a96e'].forEach((c, i) => shelf.add(box(0.12, 0.34, 0.26, mat(c), -0.55 + i * 0.16, 0.95, 0.03)));
-  shelf.add(box(1.5, 0.03, 0.36, mat('#e2dbcf'), 0, 0.76, 0));
-  shelf.position.set(-3.0, 0, -1.6);
-  g.add(shelf);
-  const fp = floorPlant(); fp.position.set(3.1, 0, -1.6); g.add(fp);
-  const small = plant(1.1); small.position.set(-2.9, 1.3, -1.6); g.add(small);
-  label('name-tag', 'You (Boss)', b, 2.3);
-  b.userData.bubble = label('bubble hidden', '', b, 3.2);
-  return { group: g, boss: b, screens, x, z };
-}
 
 // Fit the whole floor in view for the current aspect ratio, at a fixed tilt.
 function frameCamera() {
@@ -309,97 +94,92 @@ function frameCamera() {
   controls.update();
 }
 
+// Room-local spot → world spot for a cell.
+function worldSpot(cell, s, extra = {}) {
+  const c = nav.centers[cell];
+  return { ...s, cell, pos: s.pos.clone().add(c).setY(0), approach: s.approach.map((p) => p.clone().add(c).setY(0)), taken: null, ...extra };
+}
+
+function makeAgent(name, look, home, emp = null) {
+  const person = createPerson(look);
+  person.position.set(home.pos.x, home.y, home.pos.z);
+  person.rotation.y = home.yaw;
+  office.add(person);
+  label('name-tag', name, person, -0.05); // at the feet, so it never hides the head
+  person.userData.bubble = label('bubble hidden', '', person, 2.7);
+  const a = { name, person, emp, home, at: home, dest: home, route: [], speed: WALK, activity: null, onArrive: null, talkWith: null, onDuty: false };
+  home.taken = a;
+  agents.push(a);
+  return a;
+}
+
 function buildOffice(config) {
   office.clear();
+  agents.length = 0;
   const old = state.employees;
   state.employees = new Map();
   const divs = config.divisions || [];
-  // Grid of rooms plus one extra cell for the Boss area (3 rooms → 2×2).
-  const cells = divs.length + 1;
+  // Grid: one cell per division, then the Break Room and your office.
+  const cells = divs.length + 2;
   const cols = Math.ceil(Math.sqrt(cells));
   const rows = Math.ceil(cells / cols);
   const totalW = cols * ROOM_W + (cols - 1) * GAP;
   const totalD = rows * ROOM_D + (rows - 1) * GAP;
-  const cellCenter = (i) => [
-    -totalW / 2 + ROOM_W / 2 + (i % cols) * (ROOM_W + GAP),
-    -totalD / 2 + ROOM_D / 2 + Math.floor(i / cols) * (ROOM_D + GAP),
-  ];
-  const managerName = config.manager || 'Manager';
-  manager = null;
+  const centers = Array.from({ length: cells }, (_, i) => new THREE.Vector3(
+    -totalW / 2 + ROOM_W / 2 + (i % cols) * (ROOM_W + GAP), 0,
+    -totalD / 2 + ROOM_D / 2 + Math.floor(i / cols) * (ROOM_D + GAP)));
+  nav = new Nav({ cols, rows, gap: GAP, centers });
 
-  office.add(box(totalW + 8, 0.2, totalD + 8, M.ground, 0, -0.1, 0, false));
-
-  divs.forEach((d, i) => {
-    const [cx, cz] = cellCenter(i);
-    const room = new THREE.Group();
-    room.position.set(cx, 0, cz);
-    office.add(room);
-    roomShell(room, d);
-
-    const emps = d.employees || [];
-    emps.forEach((e, j) => {
-      const dr = Math.floor(j / 3), dc = j % 3;
-      const n = Math.min(3, emps.length - dr * 3);
-      const x = (dc - (n - 1) / 2) * 4.0;
-      const z = -1.6 + dr * 3.3;
-      const dk = desk(d.color || '#7c9cff', i * 3 + j);
-      dk.group.position.set(x, 0, z);
-      room.add(dk.group);
-      const anchor = new THREE.Object3D();
-      anchor.position.set(x, 0, z);
-      room.add(anchor);
-      const task = label('task-tag hidden', '', anchor, 2.35);
-      task.obj.position.x = (dc - (n - 1) / 2) * 0.6; // nudge outward so neighbouring labels don't overlap
-
-      // The Manager's figure lives in world space so it can walk to the Boss.
-      let figure = dk.figure;
-      let nameParent = figure;
-      if (e.name === managerName) {
-        dk.group.remove(figure);
-        figure = person(d.color || '#4f6bed');
-        const home = new THREE.Vector3(cx + x, -0.12, cz + z + 1.02);
-        figure.position.copy(home);
-        figure.rotation.y = Math.PI;
-        office.add(figure);
-        figure.userData.home = home;
-        figure.userData.target = home.clone();
-        figure.userData.door = new THREE.Vector3(cx, 0, cz + ROOM_D / 2 + 0.9); // walk out through the door opening
-        figure.userData.route = [];
-        figure.userData.bubble = label('bubble hidden', '', figure, 2.85);
-        manager = figure;
-        nameParent = figure;
-      }
-      label('name-tag', e.name, nameParent, -0.05);
-      const prev = old.get(key(d.id, e.name));
-      state.employees.set(key(d.id, e.name), {
-        division: d.id, divisionName: d.name, color: d.color, name: e.name, role: e.role || '',
-        screenMat: dk.screenMat, glowMat: dk.glowMat, ledMat: dk.ledMat, figure, taskEl: task.el,
-        active: false, label: prev ? prev.label : '', flag: false, watch: null, lastTs: prev ? prev.lastTs : 0,
-        offAt: 0, glow: 0,
-      });
-    });
-  });
-
-  const [bx, bz] = cellCenter(divs.length);
-  bossDesk = buildBossArea(bx, bz);
-  boss = bossDesk.boss;
-  if (!manager) { // config without a Manager employee: standalone Manager in the lobby
-    manager = person('#4f6bed');
-    const home = new THREE.Vector3(bossDesk.x - 4.5, 0, bossDesk.z + 2.5);
-    manager.position.copy(home);
-    office.add(manager);
-    manager.userData.home = home;
-    manager.userData.target = home.clone();
-    manager.userData.route = [];
-    label('name-tag', 'Manager', manager, -0.05);
-    manager.userData.bubble = label('bubble hidden', '', manager, 2.85);
+  office.add(box(totalW + 9, 0.2, totalD + 9, M.ground, 0, -0.1, 0.5, false));
+  for (let r = 0; r < rows; r++) { // corridor runners and end plants
+    const z = nav.lineZ(r);
+    office.add(rug(totalW + 1.5, 1.5, '#d8ccba', '#c9b9a2').translateZ(z));
+    for (const s of [-1, 1]) { const fp = floorPlant(r % 2 === 0); fp.position.set(s * (totalW / 2 + 3.2), 0, z); office.add(fp); }
   }
 
-  Object.assign(bounds, { w: totalW + 3, zMin: -totalD / 2 - 0.5, zMax: totalD / 2 + 1.4 });
+  const managerName = config.manager || 'Manager';
+  managerAgent = null;
+  divs.forEach((d, i) => {
+    const room = new THREE.Group();
+    room.position.copy(centers[i]);
+    office.add(room);
+    const desks = teamRoom(room, d, i * 3);
+    for (const dk of desks) {
+      const anchor = new THREE.Object3D();
+      anchor.position.set(dk.x, 0, dk.z);
+      room.add(anchor);
+      const task = label('task-tag hidden', '', anchor, 2.35);
+      task.obj.position.x = dk.labelOffset;
+      const home = worldSpot(i, dk.seat);
+      const a = makeAgent(dk.e.name, lookFor(dk.e.name, dk.e.name === managerName ? '#3d4f8f' : d.color), home);
+      a.visitSpot = worldSpot(i, dk.visit);
+      if (dk.e.name === managerName) managerAgent = a;
+      const prev = old.get(key(d.id, dk.e.name));
+      const emp = {
+        division: d.id, divisionName: d.name, color: d.color, name: dk.e.name, role: dk.e.role || '',
+        screenMat: dk.dk.screenMat, glowMat: dk.dk.glowMat, ledMat: dk.dk.ledMat, taskEl: task.el, agent: a,
+        active: false, label: prev ? prev.label : '', flag: false, watch: null, lastTs: prev ? prev.lastTs : 0,
+        offAt: 0, glow: 0,
+      };
+      a.emp = emp;
+      state.employees.set(key(d.id, dk.e.name), emp);
+    }
+  });
+
+  const bi = divs.length, oi = divs.length + 1;
+  const br = new THREE.Group(); br.position.copy(centers[bi]); office.add(br);
+  const bs = breakRoom(br);
+  breakSpots = { counter: bs.counter.map((s) => worldSpot(bi, s)), table: bs.table.map((s) => worldSpot(bi, s)), couch: bs.couch.map((s) => worldSpot(bi, s)) };
+  const or = new THREE.Group(); or.position.copy(centers[oi]); office.add(or);
+  const bo = bossOffice(or);
+  bossRoom = { screens: bo.screens, visitor: worldSpot(oi, bo.visitor) };
+  bossAgent = makeAgent('You (Boss)', { ...lookFor('boss', '#f4f4f2'), jacket: '#26324a', tie: '#c0392b' }, worldSpot(oi, bo.bossSeat));
+
+  lastBusy = now(); // give the page a calm moment before anyone wanders off
+  Object.assign(bounds, { w: totalW + 3, zMin: -totalD / 2 - 0.5, zMax: totalD / 2 + 2.2 });
   frameCamera();
   renderAll();
 }
-
 // ---------- office events ----------
 function onAction(a, replay) {
   state.lastEventTs = a.ts;
@@ -411,15 +191,16 @@ function onAction(a, replay) {
     emp.active = true; emp.offAt = 0; emp.lastTs = a.ts;
     emp.label = a.label; emp.flag = !!a.flag; emp.watch = a.watch || null;
     applyTaskTag(emp);
+    if (!replay) recall(emp.agent, true);
   }
-  if (!replay) renderPanel();
+  if (!replay) { recallAll(); renderPanel(); }
 }
 function onPrompt(p, replay) {
   state.lastEventTs = p.ts;
   state.turnActive = true;
   state.turnActions = 0;
   pushFeed(p);
-  if (!replay) say(boss, 'New request →', false, 4000);
+  if (!replay) { say(bossAgent, 'New request →', false, 4000); recallAll(); }
 }
 function onStop(s, replay) {
   state.lastEventTs = s.ts;
@@ -476,6 +257,7 @@ document.getElementById('composer').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const text = input.value.trim();
   if (!text) return;
+  recallAll(); // a task is being instructed: everyone back to their desks now
   sendBtn.disabled = true;
   try {
     await api('/api/chat/send', { text });
@@ -571,31 +353,164 @@ function connect() {
   for (const t of Object.keys(handlers)) es.addEventListener(t, (ev) => handlers[t](JSON.parse(ev.data), false));
   es.addEventListener('config', (ev) => { state.config = JSON.parse(ev.data); buildOffice(state.config); });
   es.addEventListener('chat', (ev) => upsertChat(JSON.parse(ev.data)));
-  es.addEventListener('chat-state', (ev) => { Object.assign(state.chat, JSON.parse(ev.data)); renderChat(); });
+  es.addEventListener('chat-state', (ev) => { Object.assign(state.chat, JSON.parse(ev.data)); if (state.chat.busy) recallAll(); renderChat(); });
   es.addEventListener('chat-reset', (ev) => { state.chat = JSON.parse(ev.data); renderChat(); });
   es.onerror = () => { state.connected = false; renderStatus(); };
   es.onopen = () => { state.connected = true; renderStatus(); };
 }
 
 // ---------- characters ----------
-function say(who, text, flag, ms) {
-  if (!who) return;
-  const b = who.userData.bubble;
+function say(a, text, flag, ms) {
+  if (!a) return;
+  const b = a.person.userData.bubble;
   b.el.textContent = text;
   b.el.classList.toggle('flag', !!flag);
   b.el.classList.remove('hidden');
-  clearTimeout(b.timer);
-  b.timer = setTimeout(() => b.el.classList.add('hidden'), ms);
+  b.until = performance.now() + ms;
 }
+
+// Send an agent somewhere along corridors and through doors.
+function goTo(a, dest, { hurry = false, pace = WALK, onArrive = null } = {}) {
+  if (!nav || !a) return;
+  const exit = a.at ? [...a.at.approach].reverse() : [];
+  if (a.at && a.at !== a.home && a.at.taken === a) a.at.taken = null;
+  if (a.dest && a.dest !== a.home && a.dest !== dest && a.dest.taken === a) a.dest.taken = null;
+  a.route = a.at === dest ? [] : nav.route(a.person.position, exit, dest);
+  a.at = a.route.length ? null : dest;
+  a.dest = dest;
+  if (dest !== a.home) dest.taken = a;
+  a.speed = hurry ? RUN : pace;
+  a.onArrive = onArrive;
+  if (!a.route.length && onArrive) { a.onArrive = null; onArrive(); }
+}
+
+function stopTalking(a) {
+  if (a.talkWith) { a.talkWith.talkWith = null; a.talkWith = null; }
+}
+
+// Back to the desk. Hurry when work has arrived.
+function recall(a, hurry) {
+  if (!a || a === bossAgent || a.onDuty) return;
+  a.activity = null;
+  stopTalking(a);
+  if (a.at === a.home) return;
+  if (a.dest === a.home && a.route.length) { if (hurry) a.speed = RUN; return; }
+  goTo(a, a.home, { hurry });
+}
+function recallAll() { for (const a of agents) recall(a, true); }
+
 function walkManagerToBoss(text, flag) {
-  if (!manager || !bossDesk) return;
-  const u = manager.userData;
-  const spot = new THREE.Vector3(bossDesk.x - 1.0, 0, bossDesk.z + 1.5);
-  u.route = u.door ? [u.door.clone(), spot] : [spot];
-  u.onArrive = () => {
-    say(manager, text, flag, 7000);
-    setTimeout(() => { u.route = u.door ? [u.door.clone(), u.home.clone()] : [u.home.clone()]; }, 7000);
-  };
+  const m = managerAgent;
+  if (!m || !bossRoom) return;
+  m.activity = null;
+  stopTalking(m);
+  m.onDuty = true;
+  goTo(m, bossRoom.visitor, {
+    pace: 3.2,
+    onArrive: () => {
+      say(m, text, flag, 7000);
+      setTimeout(() => { m.onDuty = false; goTo(m, m.home); }, 7000);
+    },
+  });
+}
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+
+// Ambient life while nobody is working: coffee, couch, table, desk visits.
+// Purely visual: it never touches tasks, the feed, reports, or the status pill.
+let lastBusy = 0;
+function behave() {
+  if (!nav) return;
+  const t = now();
+  const busy = state.turnActive || state.chat.busy || t - state.lastEventTs < 6000;
+  if (busy) { lastBusy = t; recallAll(); return; }
+  if (t - lastBusy < CALM_MS) return;
+  for (const a of agents) {
+    if (a.activity && a.at && t > a.activity.until) recall(a, false);
+  }
+  const away = agents.filter((a) => a.activity).length;
+  if (away >= MAX_AWAY || Math.random() > 0.3) return;
+  const free = agents.filter((a) => a.emp && a.at === a.home && !a.onDuty && !a.activity && !a.talkWith && !a.emp.active);
+  if (!free.length) return;
+  const a = pick(free);
+  const kind = pick(['coffee', 'coffee', 'couch', 'table', 'table', 'visit', 'visit']);
+  const stay = (min, max) => () => { if (a.activity) a.activity.until = now() + rand(min, max) * 1000; };
+  if (kind === 'visit') {
+    const host = pick(free.filter((h) => h !== a && h.visitSpot && !h.visitSpot.taken));
+    if (!host) return;
+    a.activity = { kind, until: Infinity };
+    goTo(a, host.visitSpot, { onArrive: () => {
+      if (host.at !== host.home || host.talkWith || host.emp.active) { recall(a, false); return; }
+      a.talkWith = host; host.talkWith = a;
+      stay(7, 12)();
+    } });
+    return;
+  }
+  const options = (breakSpots[kind === 'coffee' ? 'counter' : kind] || []).filter((s) => !s.taken);
+  if (!options.length) return;
+  a.activity = { kind, until: Infinity };
+  goTo(a, pick(options), { onArrive: kind === 'coffee' ? stay(8, 14) : stay(14, 24) });
+}
+
+// Who is currently chatting: desk visits, plus people sharing the table,
+// couch or counter. Only a 💬 bubble is shown, never invented words.
+function chatting(a, t) {
+  if (a.talkWith) return true;
+  if (!a.activity || !a.at || !breakSpots) return false;
+  for (const group of Object.values(breakSpots)) {
+    if (group.includes(a.at) && group.some((s) => s !== a.at && s.taken && s.taken.at === s)) return true;
+  }
+  return false;
+}
+
+function updateAgent(a, t, dt, moveDt = dt) {
+  const p = a.person;
+  let mode;
+  if (a.route.length) {
+    const tgt = a.route[0];
+    const dx = tgt.x - p.position.x, dz = tgt.z - p.position.z;
+    const dist = Math.hypot(dx, dz);
+    const step = a.speed * moveDt;
+    if (dist <= Math.max(step, 0.02)) {
+      p.position.x = tgt.x; p.position.z = tgt.z;
+      a.route.shift();
+      if (!a.route.length) {
+        a.at = a.dest;
+        if (a.onArrive) { const f = a.onArrive; a.onArrive = null; f(); }
+      }
+    } else {
+      p.position.x += (dx / dist) * step;
+      p.position.z += (dz / dist) * step;
+      turnToward(p, Math.atan2(dx, dz), dt * 12);
+    }
+    p.position.y += (0 - p.position.y) * Math.min(1, dt * 10);
+    mode = 'walk';
+  }
+  if (!a.route.length && a.at) {
+    const s = a.at;
+    p.position.y += (s.y - p.position.y) * Math.min(1, dt * 8);
+    let yaw = s.yaw;
+    if (a.talkWith && s.mode !== 'sit') yaw = Math.atan2(a.talkWith.person.position.x - p.position.x, a.talkWith.person.position.z - p.position.z);
+    turnToward(p, yaw, dt * 8);
+    if (s === a.home) mode = a.emp && a.emp.active ? 'type' : (a === bossAgent && (state.turnActive || state.chat.busy) ? 'type' : 'sit');
+    else mode = s.mode === 'talk' || (s.mode === 'stand' && chatting(a, t)) ? 'talk' : s.mode;
+  }
+  animatePerson(p, mode || 'stand', t, dt, a.speed > WALK ? 1.6 : 1);
+
+  // bubbles: real messages (say) win; otherwise an ambient 💬 while chatting
+  const b = p.userData.bubble;
+  if (b.until && performance.now() < b.until) return;
+  if (b.until) { b.until = 0; b.el.classList.add('hidden'); }
+  const talk = !a.onDuty && a !== bossAgent && chatting(a, t) && Math.floor(t / 2.2 + (a.talkWith ? (a.name < a.talkWith.name ? 0 : 1) : p.userData.phase)) % 2 === 0;
+  if (talk) { if (b.el.textContent !== '💬') b.el.textContent = '💬'; b.el.classList.remove('flag'); }
+  b.el.classList.toggle('hidden', !talk);
+}
+
+function turnToward(obj, yaw, k) {
+  let d = yaw - obj.rotation.y;
+  d = Math.atan2(Math.sin(d), Math.cos(d));
+  obj.rotation.y += d * Math.min(1, k);
 }
 
 // ---------- panel ----------
@@ -697,9 +612,11 @@ function resize() {
 window.addEventListener('resize', resize);
 
 const clock = new THREE.Clock();
-let lastCheck = 0;
+let lastCheck = 0, lastBehave = 0;
 function tick() {
-  const dt = Math.min(clock.getDelta(), 0.1);
+  const rawDt = clock.getDelta();
+  const dt = Math.min(rawDt, 0.1);       // pose/fade blending
+  const moveDt = Math.min(rawDt, 0.5);   // walking uses real time, so slow machines don't slow people down
   const t = clock.elapsedTime;
   const tNow = now();
 
@@ -713,6 +630,7 @@ function tick() {
     if (state.turnActive && tNow - state.lastEventTs > IDLE_AFTER_MS) { state.turnActive = false; changed = true; }
     if (changed) renderPanel();
   }
+  if (t - lastBehave > 1) { lastBehave = t; behave(); }
 
   for (const emp of state.employees.values()) {
     emp.glow += ((emp.active ? 1 : 0) - emp.glow) * Math.min(1, dt * 6);
@@ -720,32 +638,11 @@ function tick() {
     emp.glowMat.opacity = emp.glow * 0.22;
     emp.ledMat.color.set(emp.active ? '#34d399' : '#c9ced8');
     emp.taskEl.classList.toggle('hidden', !emp.active);
-    // Typing nod only while actually working (and not while walking).
-    const seated = emp.figure !== manager || emp.figure.position.distanceTo(emp.figure.userData.home) < 0.05;
-    if (seated) emp.figure.userData.head.position.y = 1.7 + (emp.active ? Math.sin(t * 9) * 0.025 : 0);
   }
-  if (bossDesk) {
+  for (const a of agents) updateAgent(a, t, dt, moveDt);
+  if (bossRoom) {
     const k = state.turnActive || state.chat.busy ? 0.8 : 0;
-    for (const s of bossDesk.screens) s.emissiveIntensity += (k - s.emissiveIntensity) * Math.min(1, dt * 4);
-  }
-
-  if (manager) {
-    const u = manager.userData;
-    const flatDist = manager.position.clone().setY(0).distanceTo(u.target.clone().setY(0));
-    if (flatDist <= 0.05 && u.route.length) u.target = u.route.shift(); // reached a waypoint: take the next one
-    const tgt = u.target;
-    const d = tgt.clone().sub(manager.position); d.y = 0;
-    const dist = d.length();
-    const home = manager.userData.home;
-    if (dist > 0.05) {
-      manager.position.add(d.normalize().multiplyScalar(Math.min(dist, dt * 3.2)));
-      manager.position.y = Math.abs(Math.sin(t * 10)) * 0.06;
-      manager.rotation.y = Math.atan2(d.x, d.z);
-    } else {
-      manager.position.y = tgt.distanceTo(home) < 0.1 ? home.y : 0; // sit back down at the desk
-      if (tgt.distanceTo(home) < 0.1) manager.rotation.y = Math.PI;
-      if (!u.route.length && u.onArrive) { const f = u.onArrive; u.onArrive = null; f(); }
-    }
+    for (const s of bossRoom.screens) s.emissiveIntensity += (k - s.emissiveIntensity) * Math.min(1, dt * 4);
   }
 
   controls.update();
@@ -753,6 +650,9 @@ function tick() {
   labelRenderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
+
+// Read-only handle for debugging/tests: who is where.
+window.__office = { agents: () => agents.map((a) => ({ name: a.name, home: a.at === a.home, walking: a.route.length > 0, activity: a.activity && a.activity.kind, talking: !!a.talkWith, onDuty: a.onDuty })) };
 
 resize();
 renderPanel();

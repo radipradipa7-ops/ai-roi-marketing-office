@@ -1,5 +1,5 @@
 {
-  "_comment": "AI Marketing Office team for the Resonance of Indonesia (ROI) Instagram ideation extension. Routing: (1) a file inside a division's folder goes to that division's employee whose keyword is in the file name, else the division's `default`; (2) otherwise the first employee (any division) whose keyword is in the file name; (3) otherwise the employee whose `tools` include the tool (trailing * = wildcard); (4) otherwise `fallback`. `watch` rules highlight file changes in the Activity feed and Manager reports. `chat` controls how the chat panel runs Claude Code.",
+  "_comment": "AI Marketing Office team for the Resonance of Indonesia (ROI) Instagram ideation extension, plus a Sales Team. Routing: (1) a file inside a division's folder goes to that division's employee whose keyword is in the file name, else the division's `default`; (2) otherwise the first employee (any division) whose keyword is in the file name; (3) otherwise the employee whose `tools` include the tool (trailing * = wildcard); (4) otherwise `fallback`. `watch` rules highlight file changes in the Activity feed and Manager reports. `chat` controls how the chat panel runs Claude Code.",
   "fallback": "Manager",
   "divisions": [
     {
@@ -33,6 +33,18 @@
       "employees": [
         { "name": "Designer", "role": "Builds visuals, assets and thumbnails", "keywords": ["thumbnail", "visual", "asset", "design", "cover", "carousel", "mockup", "moodboard", ".png", ".jpg", ".svg"] },
         { "name": "Manager", "role": "Runs the content calendar, planning and workflows", "keywords": ["calendar", "plan", "schedule", "workflow", "brief", "roadmap", "timeline", "config", "settings", "claude.md", "readme"], "tools": ["Bash", "Task", "Agent", "TodoWrite", "mcp__*"] }
+      ]
+    },
+    {
+      "id": "sales",
+      "name": "Sales Team",
+      "color": "#d9a63c",
+      "folders": ["sales", "deals", "pipeline", "crm", "accounts", "clients", "customers", "proposals", "pitches"],
+      "default": "Account Executive",
+      "employees": [
+        { "name": "Sales Manager", "role": "Sets targets and KPIs, tracks sales analytics, coaches the team", "keywords": ["target", "quota", "forecast", "kpi", "coaching", "training", "playbook", "sales_report", "commission"] },
+        { "name": "Account Executive", "role": "Works qualified prospects, runs pitches, negotiates and closes deals", "keywords": ["pitch", "demo", "proposal", "deal", "prospect", "negotiat", "contract", "lead", "outreach", "closing"] },
+        { "name": "Customer Success", "role": "Onboarding, support, retention, upsell and cross-sell", "keywords": ["onboarding", "retention", "support", "upsell", "cross-sell", "crosssell", "renewal", "churn", "client", "customer", "faq"] }
       ]
     }
   ],
