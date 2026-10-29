@@ -72,7 +72,7 @@
   ],
   "chat": {
     "permissionMode": "acceptEdits",
-    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite", "Task", "Agent", "Bash(node motion/render_loop.js:*)", "mcp__canva"],
+    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite", "Task", "Agent", "Bash(node motion/render_loop.js:*)", "mcp__canva", "mcp__Canva"],
     "maxTurns": 40
   }
 }

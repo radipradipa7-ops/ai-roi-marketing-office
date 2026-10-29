@@ -38,7 +38,8 @@ fs.watchFile(CONFIG_FILE, { interval: 1000 }, () => {
 });
 
 function toolMatches(e, tool) {
-  return (e.tools || []).some((t) => t === tool || (t.endsWith('*') && tool && tool.startsWith(t.slice(0, -1))));
+  const tl = lc(tool || ''); // case-insensitive: connectors may be named "canva" or "Canva"
+  return (e.tools || []).some((t) => lc(t) === tl || (t.endsWith('*') && tl.startsWith(lc(t.slice(0, -1)))));
 }
 
 const lc = (x) => String(x).toLowerCase();
