@@ -30,7 +30,7 @@ export function roomShell(room, { name, color }, { floor, wallH = WALL_H } = {})
   wall(side, 0.14, -(DOOR / 2 + side / 2), ROOM_D / 2);
   wall(side, 0.14, DOOR / 2 + side / 2, ROOM_D / 2);
   const tag = new THREE.Object3D();
-  tag.position.set(-DOOR / 2 - 1.6, 0.25, ROOM_D / 2 + 0.55);
+  tag.position.set(0, 0.25, ROOM_D / 2 + 0.95); // centred below the door, so long names stay in view
   room.add(tag);
   label('room-tag', name, tag, 0);
 }
@@ -75,25 +75,31 @@ export function desk(color, index) {
 export function teamRoom(room, d, colorIndexBase) {
   roomShell(room, d);
   const accent = new THREE.Color(d.color || '#9aa7c7');
-  room.add(rug(ROOM_W - 1.6, 3.6, accent.clone().lerp(new THREE.Color('#f3ece2'), 0.7).getStyle(), accent.clone().lerp(new THREE.Color('#ffffff'), 0.45).getStyle()).translateZ(-0.9));
+  const emps = d.employees || [];
+  // Up to 3 desks in one row; 4+ people get two rows with a walking lane between desks.
+  const perRow = emps.length <= 3 ? Math.max(emps.length, 1) : Math.min(3, Math.ceil(emps.length / 2));
+  const nRows = Math.ceil(emps.length / perRow);
+  const rowZ = nRows > 1 ? [-2.3, 0.9] : [-1.6];
+  const laneX = perRow % 2 ? 1.85 : 0; // x where nobody's desk is, for walking past the front row
+  room.add(rug(ROOM_W - 1.6, nRows > 1 ? 6.4 : 3.6, accent.clone().lerp(new THREE.Color('#f3ece2'), 0.7).getStyle(), accent.clone().lerp(new THREE.Color('#ffffff'), 0.45).getStyle()).translateZ(nRows > 1 ? -0.5 : -0.9));
   room.add(box(3.2, 0.5, 0.04, mat(accent.getStyle(), { roughness: 0.5 }), 0, 0.55, -ROOM_D / 2 + 0.1));
   const fp = floorPlant(); fp.position.set(ROOM_W / 2 - 0.6, 0, ROOM_D / 2 - 0.7); room.add(fp);
   const fp2 = floorPlant(true); fp2.position.set(-ROOM_W / 2 + 0.6, 0, -ROOM_D / 2 + 0.6); room.add(fp2);
-  const emps = d.employees || [];
   const desks = [];
   emps.forEach((e, j) => {
-    const dr = Math.floor(j / 3), dc = j % 3;
-    const n = Math.min(3, emps.length - dr * 3);
+    const dr = Math.floor(j / perRow), dc = j % perRow;
+    const n = Math.min(perRow, emps.length - dr * perRow);
     const x = (dc - (n - 1) / 2) * 3.7;
-    const z = -1.6 + dr * 3.3;
+    const z = rowZ[Math.min(dr, rowZ.length - 1)];
+    const back = dr < nRows - 1; // back-row desks are reached via the lane
     const dk = desk(d.color || '#7c9cff', colorIndexBase + j);
     dk.group.position.set(x, 0, z);
     room.add(dk.group);
     const seatZ = z + dk.seat.z;
     desks.push({
       e, x, z, dk, labelOffset: (dc - (n - 1) / 2) * 0.6,
-      seat: spot(x, seatZ + 0.02, Math.PI, 'sit', [V(x, seatZ + 0.85)], dk.seat.y),
-      visit: spot(x + 0.95, seatZ + 0.15, -Math.PI / 2 - 0.35, 'talk', [V(x + 0.95, seatZ + 0.85)]),
+      seat: spot(x, seatZ + 0.02, Math.PI, 'sit', [...(back ? [V(laneX, seatZ + 0.85)] : []), V(x, seatZ + 0.85)], dk.seat.y),
+      visit: spot(x + 0.95, seatZ + 0.15, -Math.PI / 2 - 0.35, 'talk', [...(back ? [V(laneX, seatZ + 0.85)] : []), V(x + 0.95, seatZ + 0.85)]),
     });
   });
   return desks;

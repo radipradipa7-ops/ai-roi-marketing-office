@@ -1,2 +1,5 @@
 .office/
 node_modules/
+
+motion/renders/
+motion/work/

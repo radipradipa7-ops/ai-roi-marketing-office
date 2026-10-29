@@ -100,12 +100,12 @@ function worldSpot(cell, s, extra = {}) {
   return { ...s, cell, pos: s.pos.clone().add(c).setY(0), approach: s.approach.map((p) => p.clone().add(c).setY(0)), taken: null, ...extra };
 }
 
-function makeAgent(name, look, home, emp = null) {
+function makeAgent(name, look, home, emp = null, tagY = -0.05) {
   const person = createPerson(look);
   person.position.set(home.pos.x, home.y, home.pos.z);
   person.rotation.y = home.yaw;
   office.add(person);
-  label('name-tag', name, person, -0.05); // at the feet, so it never hides the head
+  label('name-tag', name, person, tagY); // at the feet, so it never hides the head
   person.userData.bubble = label('bubble hidden', '', person, 2.7);
   const a = { name, person, emp, home, at: home, dest: home, route: [], speed: WALK, activity: null, onArrive: null, talkWith: null, onDuty: false };
   home.taken = a;
@@ -121,7 +121,7 @@ function buildOffice(config) {
   const divs = config.divisions || [];
   // Grid: one cell per division, then the Break Room and your office.
   const cells = divs.length + 2;
-  const cols = Math.ceil(Math.sqrt(cells));
+  const cols = cells <= 4 ? 2 : cells <= 8 ? Math.ceil(cells / 2) : Math.ceil(Math.sqrt(cells * 1.5));
   const rows = Math.ceil(cells / cols);
   const totalW = cols * ROOM_W + (cols - 1) * GAP;
   const totalD = rows * ROOM_D + (rows - 1) * GAP;
@@ -151,7 +151,8 @@ function buildOffice(config) {
       const task = label('task-tag hidden', '', anchor, 2.35);
       task.obj.position.x = dk.labelOffset;
       const home = worldSpot(i, dk.seat);
-      const a = makeAgent(dk.e.name, lookFor(dk.e.name, dk.e.name === managerName ? '#3d4f8f' : d.color), home);
+      const odd = desks.indexOf(dk) % 2 === 1; // stagger neighbouring name tags so long names don't overlap
+      const a = makeAgent(dk.e.name, lookFor(dk.e.name, dk.e.name === managerName ? '#3d4f8f' : d.color), home, null, odd ? -1.3 : -0.05);
       a.visitSpot = worldSpot(i, dk.visit);
       if (dk.e.name === managerName) managerAgent = a;
       const prev = old.get(key(d.id, dk.e.name));
@@ -176,7 +177,8 @@ function buildOffice(config) {
   bossAgent = makeAgent('You (Boss)', { ...lookFor('boss', '#f4f4f2'), jacket: '#26324a', tie: '#c0392b' }, worldSpot(oi, bo.bossSeat));
 
   lastBusy = now(); // give the page a calm moment before anyone wanders off
-  Object.assign(bounds, { w: totalW + 3, zMin: -totalD / 2 - 0.5, zMax: totalD / 2 + 2.2 });
+  Object.assign(bounds, { w: totalW * 1.06 + 4, // extra margin: the front row looks wider in perspective
+    zMin: -totalD / 2 - 0.5, zMax: totalD / 2 + 2.2 });
   frameCamera();
   renderAll();
 }

@@ -1,0 +1,26 @@
+{
+  "_comment": "EXAMPLE ONLY. Every value here is a placeholder to be replaced: canvas and fps by the Researcher (venue LED specs), allocation and sponsorTiers by the Analyst (sponsor contracts), names by the Copywriter, files by the Designer. Copy to motion/loop_spec.json and edit. Run: node motion/render_loop.js motion/loop_spec.json --plan",
+  "name": "kalantara_stage_loop",
+  "canvas": { "width": 1920, "height": 1080, "fps": 50, "background": "#000000", "safeArea": 0.8 },
+  "loop": { "seconds": 120 },
+  "cycles": 2,
+  "transition": { "type": "fade", "seconds": 1.0, "byCategory": { "main": "fadeblack", "kalantara": "dissolve" } },
+  "minHoldSeconds": 4,
+  "allocation": { "main": 0.35, "kalantara": 0.25, "sponsors": 0.40 },
+  "elements": {
+    "main": { "name": "Resonance of Indonesia (main logo)", "file": "design/stage_visual/main_logo_master.png" },
+    "kalantara": { "name": "Kalantara (theme identity)", "file": "design/stage_visual/kalantara_logo_master.png" }
+  },
+  "sponsorTiers": [
+    { "tier": "platinum", "weight": 3, "sponsors": [
+      { "name": "Platinum Sponsor A", "file": "design/stage_visual/sponsors/platinum_a.png" }
+    ] },
+    { "tier": "gold", "weight": 2, "sponsors": [
+      { "name": "Gold Sponsor B", "file": "design/stage_visual/sponsors/gold_b.png" },
+      { "name": "Gold Sponsor C", "file": "design/stage_visual/sponsors/gold_c.png" }
+    ] },
+    { "tier": "silver", "weight": 1, "sponsors": [
+      { "name": "Silver Sponsors board (D, E, F)", "file": "design/stage_visual/sponsors/silver_board_1.png" }
+    ] }
+  ]
+}

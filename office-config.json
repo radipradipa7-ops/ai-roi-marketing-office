@@ -1,5 +1,5 @@
 {
-  "_comment": "AI Marketing Office team for the Resonance of Indonesia (ROI) Instagram ideation extension, plus a Sales Team. Routing: (1) a file inside a division's folder goes to that division's employee whose keyword is in the file name, else the division's `default`; (2) otherwise the first employee (any division) whose keyword is in the file name; (3) otherwise the employee whose `tools` include the tool (trailing * = wildcard); (4) otherwise `fallback`. `watch` rules highlight file changes in the Activity feed and Manager reports. `chat` controls how the chat panel runs Claude Code.",
+  "_comment": "AI Marketing Office team for the Resonance of Indonesia (ROI) Instagram ideation extension, plus a Sales Team and the Motion Graphics & Video Synthesis division for stage visuals. Routing: (1) a file inside a division's folder goes to that division's employee whose keyword is in the file name, else the division's `default`; (2) otherwise the first employee (any division) whose keyword is in the file name; (3) otherwise the employee whose `tools` include the tool (trailing * = wildcard); (4) otherwise `fallback`. `watch` rules highlight file changes in the Activity feed and Manager reports. `chat` controls how the chat panel runs Claude Code.",
   "fallback": "Manager",
   "divisions": [
     {
@@ -10,7 +10,7 @@
       "default": "Researcher",
       "employees": [
         { "name": "Researcher", "role": "Finds trends and market opportunities", "keywords": ["trend", "opportunit", "market", "competitor", "research", "audience"], "tools": ["WebSearch", "WebFetch"] },
-        { "name": "Analyst", "role": "Tracks performance and audience retention", "keywords": ["metric", "retention", "analytic", "performance", "kpi", "report", "stats", "insight", ".csv", ".xlsx"] }
+        { "name": "Analyst", "role": "Tracks performance and audience retention", "keywords": ["metric", "retention", "analytic", "performance", "kpi", "report", "stats", "insight", "screentime", "screen_time", "allocation", ".csv", ".xlsx"] }
       ]
     },
     {
@@ -31,8 +31,8 @@
       "folders": ["design", "assets", "thumbnails", "visuals", "calendar", "planning", "office", ".claude"],
       "default": "Manager",
       "employees": [
-        { "name": "Designer", "role": "Builds visuals, assets and thumbnails", "keywords": ["thumbnail", "visual", "asset", "design", "cover", "carousel", "mockup", "moodboard", ".png", ".jpg", ".svg"] },
-        { "name": "Manager", "role": "Runs the content calendar, planning and workflows", "keywords": ["calendar", "plan", "schedule", "workflow", "brief", "roadmap", "timeline", "config", "settings", "claude.md", "readme"], "tools": ["Bash", "Task", "Agent", "TodoWrite", "mcp__*"] }
+        { "name": "Designer", "agent": "graphic-designer", "role": "Builds visuals, assets and thumbnails", "keywords": ["thumbnail", "visual", "asset", "design", "cover", "carousel", "mockup", "moodboard", "logo", ".png", ".jpg", ".svg"], "tools": ["mcp__canva__*"] },
+        { "name": "Manager", "role": "Runs the content calendar, planning and workflows", "keywords": ["calendar", "plan", "schedule", "workflow", "brief", "roadmap", "timeline", "blueprint", "config", "settings", "claude.md", "readme"], "tools": ["Bash", "Task", "Agent", "TodoWrite", "mcp__*"] }
       ]
     },
     {
@@ -45,6 +45,19 @@
         { "name": "Sales Manager", "role": "Sets targets and KPIs, tracks sales analytics, coaches the team", "keywords": ["target", "quota", "forecast", "kpi", "coaching", "training", "playbook", "sales_report", "commission"] },
         { "name": "Account Executive", "role": "Works qualified prospects, runs pitches, negotiates and closes deals", "keywords": ["pitch", "demo", "proposal", "deal", "prospect", "negotiat", "contract", "lead", "outreach", "closing"] },
         { "name": "Customer Success", "role": "Onboarding, support, retention, upsell and cross-sell", "keywords": ["onboarding", "retention", "support", "upsell", "cross-sell", "crosssell", "renewal", "churn", "client", "customer", "faq"] }
+      ]
+    },
+    {
+      "id": "motion",
+      "name": "Motion Graphics & Video Synthesis",
+      "color": "#c45ad6",
+      "folders": ["motion", "renders", "stage", "loops", "video"],
+      "default": "Motion Director",
+      "employees": [
+        { "name": "Motion Director", "role": "Owns the loop spec, timing math, transition grammar and final sign-off", "keywords": ["loop_spec", "timing", "storyboard", "animatic", "motion_brief", "style_frame", "director"] },
+        { "name": "Motion Designer", "role": "Animates layers: transitions, particles, kinetic typography", "keywords": ["animation", "animate", "transition", "particle", "kinetic", ".aep", ".blend", ".mogrt", "lottie"] },
+        { "name": "Render Engineer", "role": "Builds, renders and encodes loops (ProRes, H.264, HAP)", "keywords": ["render", "encode", "prores", "codec", "ffmpeg", ".mp4", ".mov", "hap"] },
+        { "name": "Playback QA", "role": "Verifies seams, timing, LED mapping and on-site playback", "keywords": ["qa", "seam", "playback", "pixel_map", "led", "test_pattern", "verify", "checklist"] }
       ]
     }
   ],
@@ -59,7 +72,7 @@
   ],
   "chat": {
     "permissionMode": "acceptEdits",
-    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite"],
+    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite", "Task", "Agent", "Bash(node motion/render_loop.js:*)", "mcp__canva"],
     "maxTurns": 40
   }
 }

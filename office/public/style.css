@@ -46,7 +46,7 @@ button { font: inherit; }
 /* ---- side panel ---- */
 #panel { width: 410px; flex: none; background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
 #panel h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
-#team-section { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); max-height: 34%; overflow: auto; flex: none; }
+#team-section { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); max-height: 40%; overflow: auto; flex: none; }
 .room { margin-bottom: 4px; }
 .div-name { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #4a5263; margin: 6px 0 2px; }
 .dot { width: 8px; height: 8px; border-radius: 3px; flex: none; }
