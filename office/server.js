@@ -38,7 +38,8 @@ fs.watchFile(CONFIG_FILE, { interval: 1000 }, () => {
 });
 
 function toolMatches(e, tool) {
-  return (e.tools || []).some((t) => t === tool || (t.endsWith('*') && tool && tool.startsWith(t.slice(0, -1))));
+  const tl = lc(tool || ''); // case-insensitive: connectors may be named "canva" or "Canva"
+  return (e.tools || []).some((t) => lc(t) === tl || (t.endsWith('*') && tl.startsWith(lc(t.slice(0, -1)))));
 }
 
 const lc = (x) => String(x).toLowerCase();
@@ -46,6 +47,7 @@ const inFolder = (path_, folder) => folder !== '*' && (path_ === lc(folder).repl
 const hasKeyword = (e, base) => !!base && (e.keywords || []).some((k) => base.includes(lc(k)));
 
 // Routing, in order:
+//  0. a sub-agent is acting → its persona's desk (employee `agent`, or the name as a slug: "Hook Writer" → hook-writer)
 //  1. the file sits in a division's folder → that division's keyword match, else its `default`, else its first employee
 //  2. the file name contains an employee's keyword (any division)
 //  3. the tool is in an employee's `tools` list (trailing * = prefix wildcard)
@@ -57,7 +59,8 @@ function routeAction(entry) {
   const file = entry.file && entry.file !== '.' ? lc(entry.file) : null;
   const base = file ? file.split('/').pop() : '';
   let pick = null;
-  if (file && !entry.outside) {
+  if (entry.agent) pick = all.find(({ e }) => (e.agent || lc(e.name).replace(/[^a-z0-9]+/g, '-')) === lc(entry.agent)) || null;
+  if (!pick && file && !entry.outside) {
     const div = divs.find((d) => (d.folders || []).some((f) => inFolder(file, f)));
     if (div) {
       const emps = div.employees || [];

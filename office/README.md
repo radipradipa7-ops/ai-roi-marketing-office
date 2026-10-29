@@ -24,9 +24,9 @@ Use `OFFICE_PORT=xxxx` to change the port.
    Files outside the project are logged by base name only. The hook prints nothing and always exits 0, in about 50 ms.
 2. **Server** (`office/server.js`) tails the log, routes each action to an employee, builds the Manager's report
    on every `Stop`, and streams everything over Server-Sent Events (`/events`).
-3. **Team config** (`office-config.json`): nine roles in four rooms. Researcher and Analyst are in the Insights Lab,
-   Hook Writer and Copywriter in the Creative Studio, Designer and Manager in Production & Ops, and the Sales Manager,
-   Account Executive and Customer Success in the Sales Team. Routing, in order:
+3. **Team config** (`office-config.json`): thirteen roles in five rooms. Researcher and Analyst are in the Insights Lab,
+   Hook Writer and Copywriter in the Creative Studio, Designer and Manager in Production & Ops, the Sales Manager,
+   Account Executive and Customer Success in the Sales Team, and four Motion roles in Motion Graphics & Video Synthesis. Routing, in order:
    - a file inside a division's folder goes to that division's employee whose keyword is in the file name, else to the division's `default`;
    - otherwise to the first employee whose keyword is in the file name;
    - otherwise to the employee whose `tools` include the tool (`mcp__*` is a prefix wildcard);
@@ -51,6 +51,13 @@ Use `OFFICE_PORT=xxxx` to change the port.
    the table or on the couch, or visit a colleague's desk, showing only a 💬 bubble. This is ambient animation: it
    never creates tasks, feed entries or reports, and the status still says Idle. As soon as you send a chat message
    or Claude Code starts working, everyone hurries back to their desk.
+
+8. **Motion Graphics & Video Synthesis** (`motion/`): `node motion/render_loop.js <spec> [--plan] [--placeholders]
+   [--scale 0.25] [--formats prores,mp4,hap]` renders a frame-exact, seamless LED stage loop from
+   `motion/loop_spec.json` with ffmpeg, then writes a timing CSV and a QA report (seam check, frame counts).
+   Needs `ffmpeg` (macOS: `brew install ffmpeg`). The full process is in `planning/stage_loop_blueprint.md`; role
+   personas are in `.claude/agents/`. The chat may delegate to these sub-agents (`Task`), run only the render script
+   (`Bash(node motion/render_loop.js:*)`), and use the Canva connector if you have added it.
 
 `CLAUDE.md` gives every Claude Code run the ROI context (ideation only, hand-off to the human team) and the folder
 conventions that make routing work.

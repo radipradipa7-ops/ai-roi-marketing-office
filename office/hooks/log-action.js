@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Claude Code hook: appends ONE line per event to .office/activity.log.
 // Privacy contract: we record only the event, the tool name, the file name
-// being touched, and (for side effects outside this folder) a short category
-// label such as "git-push". File contents, command text, and prompts are
-// read from stdin only to derive those fields and are never written anywhere.
+// being touched, the sub-agent role acting (e.g. "researcher"), and (for side
+// effects outside this folder) a short category label such as "git-push".
+// File contents, command text, and prompts are read from stdin only to derive
+// those fields and are never written anywhere.
 // Reliability contract: never print to stdout, never block, always exit 0.
 'use strict';
 const fs = require('fs');
@@ -27,6 +28,7 @@ function handle(input) {
 
   const entry = { ts: Date.now(), event };
   if (input.session_id) entry.session = String(input.session_id).slice(0, 8);
+  if (typeof input.agent_type === 'string' && /^[\w-]{1,40}$/.test(input.agent_type)) entry.agent = input.agent_type; // sub-agent role name only
 
   if (event === 'PreToolUse') {
     const tool = String(input.tool_name || 'unknown');
