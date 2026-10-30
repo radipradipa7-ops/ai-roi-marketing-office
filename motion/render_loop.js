@@ -150,13 +150,21 @@ function run(cmd, args, quiet = true) {
   return r;
 }
 
+const PLACEHOLDER_FONT = [
+  '/System/Library/Fonts/Supplemental/Arial.ttf', '/Library/Fonts/Arial.ttf', '/System/Library/Fonts/Helvetica.ttc',
+  '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', '/usr/share/fonts/dejavu/DejaVuSans.ttf', 'C:/Windows/Fonts/arial.ttf',
+].find((f) => fs.existsSync(f)) || null;
+
 function makePlaceholder(file, text, sub, w, h) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const esc = (s) => s.replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "\u2019");
+  // Name a font file directly: without one, ffmpeg's fontconfig can scan every font on the machine for
+  // each placeholder, which took minutes per slide on some Macs.
+  const font = PLACEHOLDER_FONT ? `fontfile='${PLACEHOLDER_FONT.replace(/\\/g, '/').replace(/:/g, '\\:')}':` : '';
   run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', `color=c=#20283a:s=${w}x${h}`, '-vf',
-    `drawbox=x=0:y=0:w=iw:h=ih:color=#8fa3c8:t=6,drawtext=text='PLACEHOLDER':fontcolor=#8fa3c8:fontsize=${Math.round(h / 9)}:x=(w-tw)/2:y=h*0.2,` +
-    `drawtext=text='${esc(text)}':fontcolor=white:fontsize=${Math.round(h / 7)}:x=(w-tw)/2:y=(h-th)/2,` +
-    `drawtext=text='${esc(sub)}':fontcolor=#c9d2e3:fontsize=${Math.round(h / 12)}:x=(w-tw)/2:y=h*0.72`, '-frames:v', '1', file]);
+    `drawbox=x=0:y=0:w=iw:h=ih:color=#8fa3c8:t=6,drawtext=${font}text='PLACEHOLDER':fontcolor=#8fa3c8:fontsize=${Math.round(h / 9)}:x=(w-tw)/2:y=h*0.2,` +
+    `drawtext=${font}text='${esc(text)}':fontcolor=white:fontsize=${Math.round(h / 7)}:x=(w-tw)/2:y=(h-th)/2,` +
+    `drawtext=${font}text='${esc(sub)}':fontcolor=#c9d2e3:fontsize=${Math.round(h / 12)}:x=(w-tw)/2:y=h*0.72`, '-frames:v', '1', file]);
 }
 
 function imageSize(file) {
