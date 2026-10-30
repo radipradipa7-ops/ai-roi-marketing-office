@@ -9,6 +9,7 @@
 //   node motion/render_loop.js <spec.json> --placeholders    # render with labelled placeholder cards
 //   node motion/render_loop.js <spec.json> --scale 0.25      # quick low-res preview
 //   node motion/render_loop.js <spec.json> --formats prores,mp4,hap
+//   node motion/render_loop.js --doctor                       # check ffmpeg/ffprobe and codecs
 //
 // Seamless-loop method: render slides S0..Sn-1 plus a second copy of S0, with
 // a cross-fade between each. Then cut exactly one period P out of that chain,
@@ -267,7 +268,35 @@ function render(plan, spec, opts) {
   if (qa.some((q) => !q.pass)) process.exit(2);
 }
 
+// ---------- doctor ----------
+function doctor() {
+  console.log('Render toolchain check');
+  let ok = true;
+  for (const bin of ['ffmpeg', 'ffprobe']) {
+    const r = spawnSync(bin, ['-version'], { encoding: 'utf8' });
+    if (r.error || r.status !== 0) { ok = false; console.log(`  ✖ ${bin}: not found (macOS: brew install ffmpeg, or a static build in ~/.local/bin)`); }
+    else console.log(`  ✔ ${bin}: ${r.stdout.split('\n')[0]}`);
+  }
+  if (ok) {
+    const enc = spawnSync('ffmpeg', ['-hide_banner', '-encoders'], { encoding: 'utf8' }).stdout || '';
+    const flt = spawnSync('ffmpeg', ['-hide_banner', '-filters'], { encoding: 'utf8' }).stdout || '';
+    for (const [name, label, needed] of [['prores_ks', 'ProRes (--formats prores)', true], ['libx264', 'H.264 (--formats mp4)', true], [' hap ', 'HAP-Q (--formats hap)', false]]) {
+      const has = enc.includes(name);
+      if (!has && needed) ok = false;
+      console.log(`  ${has ? '✔' : needed ? '✖' : '⚠'} ${label}${has ? '' : needed ? ': missing' : ': missing (use prores,mp4 instead)'}`);
+    }
+    for (const f of ['xfade', 'psnr', 'drawtext']) {
+      const has = new RegExp(`\\s${f}\\s`).test(flt);
+      if (!has) ok = false;
+      console.log(`  ${has ? '✔' : '✖'} filter ${f}`);
+    }
+  }
+  console.log(ok ? '\nReady to render.' : '\nNot ready: fix the ✖ items above.');
+  process.exit(ok ? 0 : 1);
+}
+
 // ---------- main ----------
+if (flag('--doctor')) doctor();
 const specFile = path.resolve(ROOT, specPath);
 if (!fs.existsSync(specFile)) fail(`Spec not found: ${specPath}. Start from motion/loop_spec.example.json.`);
 let spec;

@@ -72,7 +72,7 @@
   ],
   "chat": {
     "permissionMode": "acceptEdits",
-    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite", "Task", "Agent", "Bash(node motion/render_loop.js:*)", "mcp__canva", "mcp__Canva"],
+    "allowedTools": ["Read", "Write", "Edit", "MultiEdit", "Glob", "Grep", "WebSearch", "WebFetch", "TodoWrite", "Task", "Agent", "Bash(node motion/render_loop.js:*)", "Bash(ffmpeg -version)", "Bash(ffprobe -version)", "Bash(which ffmpeg)", "Bash(which ffprobe)", "mcp__canva", "mcp__Canva"],
     "maxTurns": 40
   }
 }

@@ -17,3 +17,4 @@ Rules:
 - Enforce every timing rule R1–R13 in planning/stage_loop_blueprint.md; refuse plans that break the minimum hold or a contract.
 - Never change allocation numbers yourself: send discrepancies back to the Analyst.
 - Placeholder renders are never deliverables. Start docs with `Status: DRAFT`; end with Open questions and Handoff lines.
+- Running the renderer: always use exactly `node motion/render_loop.js …` from the project root (the session already starts there). Don't prefix it with `cd`, don't chain it with `&&` or `;`, and don't use absolute paths: anything else is blocked by the office's permissions. To check the toolchain, run `node motion/render_loop.js --doctor`; never conclude that ffmpeg is missing without running it.

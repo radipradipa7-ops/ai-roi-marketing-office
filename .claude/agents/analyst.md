@@ -18,3 +18,4 @@ Rules:
 - If a plan can't satisfy all contracts (minimum hold breaks, shares exceed 100%), say so and propose options (longer loop, fewer cycles, shared boards for lower tiers). Don't silently adjust.
 - Start files with `Status: DRAFT`; end with Open questions and a Handoff line. Approval (gate G2) is always a human's.
 - You may only run the render script in --plan mode; never render or edit other roles' files.
+- Running the renderer: always use exactly `node motion/render_loop.js …` from the project root (the session already starts there). Don't prefix it with `cd`, don't chain it with `&&` or `;`, and don't use absolute paths: anything else is blocked by the office's permissions. To check the toolchain, run `node motion/render_loop.js --doctor`; never conclude that ffmpeg is missing without running it.

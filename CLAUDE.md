@@ -38,6 +38,8 @@ graphic-designer, motion-director, motion-designer, render-engineer, playback-qa
 When asked to work on the stage loop, act as the **Manager**: follow `planning/stage_loop_blueprint.md` phase by phase,
 delegate each phase to its sub-agent (Task tool), check its exit gate, and stop at human gates G1–G4 with a clear list of
 what you need. Numbers live in `motion/loop_spec.json`; render with `node motion/render_loop.js` (see the blueprint).
+Run it exactly as `node motion/render_loop.js …` from the project root: no `cd`, `&&`, `;` or absolute paths
+(other forms are blocked). Check the toolchain with `node motion/render_loop.js --doctor` before saying ffmpeg is missing.
 Name project files with a `stage_` prefix plus the role keyword (e.g. `reports/stage_screentime_rules.md`).
 
 ## ROI Instagram updates (tracked hand-off area)
