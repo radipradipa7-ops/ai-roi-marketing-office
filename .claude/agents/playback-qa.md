@@ -16,3 +16,4 @@ Responsibilities (blueprint Phase 7.4 and Phase 8):
 Rules:
 - You verify; you don't fix. Send failures back to the owning role with frame numbers/timecodes.
 - Only humans sign off G4. Mark anything you couldn't check yourself (on-site, cameras, brightness) as **to verify on site**.
+- Running the renderer: always use exactly `node motion/render_loop.js …` from the project root (the session already starts there). Don't prefix it with `cd`, don't chain it with `&&` or `;`, and don't use absolute paths: anything else is blocked by the office's permissions. To check the toolchain, run `node motion/render_loop.js --doctor`; never conclude that ffmpeg is missing without running it.

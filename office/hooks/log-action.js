@@ -34,7 +34,12 @@ function handle(input) {
     const tool = String(input.tool_name || 'unknown');
     const ti = input.tool_input || {};
     entry.tool = tool;
-    const target = ti.file_path || ti.notebook_path || ti.path;
+    let target = ti.file_path || ti.notebook_path || ti.path;
+    // `node some/script.js …`: the script is the file being touched (only its name is kept, never the command)
+    if (!target && tool === 'Bash' && typeof ti.command === 'string') {
+      const m = /^\s*node\s+([\w./-]+\.[cm]?js)(\s|$)/.exec(ti.command);
+      if (m) target = m[1];
+    }
     if (typeof target === 'string' && target) {
       const abs = path.resolve(project, target);
       const rel = path.relative(project, abs);

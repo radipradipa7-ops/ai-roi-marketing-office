@@ -124,6 +124,14 @@ class Chat {
 
     const env = { ...process.env };
     for (const k of SESSION_ENV) delete env[k];
+    // Tools installed by Homebrew, the Claude Code installer or by hand (e.g. ffmpeg) live here;
+    // make sure Claude can find them even if the office was started from a shell without them on PATH.
+    if (process.platform !== 'win32') {
+      const home = process.env.HOME || '';
+      const extra = [path.join(home, '.local/bin'), '/opt/homebrew/bin', '/usr/local/bin'];
+      const parts = (env.PATH || '').split(':');
+      env.PATH = [...parts, ...extra.filter((d) => !parts.includes(d))].join(':');
+    }
 
     this.update(userMsg, { status: 'sent' });
     const assistantMsg = this.add({ role: 'assistant', text: '', status: 'running', tools: [] });
