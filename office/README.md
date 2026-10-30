@@ -57,7 +57,9 @@ Use `OFFICE_PORT=xxxx` to change the port.
    `motion/loop_spec.json` with ffmpeg, then writes a timing CSV and a QA report (seam check, frame counts).
    Needs `ffmpeg` (macOS: `brew install ffmpeg`). The full process is in `planning/stage_loop_blueprint.md`; role
    personas are in `.claude/agents/`. The chat may delegate to these sub-agents (`Task`), run only the render script
-   (`Bash(node motion/render_loop.js:*)`), and use the Canva connector if you have added it.
+   (`Bash(node motion/render_loop.js:*)`), and use the Canva connector if you have added it. Use `--preview` for quick
+   looks (seconds) and `--doctor` to check ffmpeg. Optional: set `"model": "sonnet"` under `chat` in the config for
+   faster (lighter) chat replies; leave it out to use your Claude Code default.
 
 `CLAUDE.md` gives every Claude Code run the ROI context (ideation only, hand-off to the human team) and the folder
 conventions that make routing work.

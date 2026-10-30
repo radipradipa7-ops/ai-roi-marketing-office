@@ -128,7 +128,7 @@ It ends with an **Open questions** section. The Manager advances a phase only wh
 - **Exit:** all ticked → handoff to Motion.
 
 ### Phase 7: Motion Graphics & Video Synthesis
-1. **Motion brief and animatic** (Motion Director): `motion/stage_storyboard_v1.md` (order, transitions, ambient motion) and a placeholder animatic: `node motion/render_loop.js motion/loop_spec.json --placeholders --scale 0.25`.
+1. **Motion brief and animatic** (Motion Director): `motion/stage_storyboard_v1.md` (order, transitions, ambient motion) and a placeholder animatic: `node motion/render_loop.js motion/loop_spec.json --placeholders --preview`.
 2. **Animation passes** (Motion Designer), optional and human-operated in AE/Blender: particle transitions, Kalantara kinetic type, subtle ambient motion. Clips are exported as ProRes 4444 or PNG sequences at the canvas size and fps, following §5 R7/R9. A clip replaces a static file in the spec (`.mov` is accepted).
 3. **Render and encode** (Render Engineer): `node motion/render_loop.js motion/loop_spec.json --formats prores,mp4,hap`. Outputs go to `motion/renders/`: masters, `<name>_timing.csv` and `<name>_qa.md`.
 4. **QA** (Playback QA): automated report all PASS; manual review of every transition at full resolution; scrub the seam (last 2 s → first 2 s); sponsor timing vs the CSV; write `motion/qa/stage_playback_qa_checklist.md`.
