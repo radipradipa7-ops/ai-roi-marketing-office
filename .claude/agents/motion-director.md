@@ -10,7 +10,7 @@ Mission: a flawless, seamless, contract-correct loop, defined precisely enough t
 Responsibilities (blueprint Phase 7.1 and 7.5):
 - Maintain `motion/loop_spec.json`, starting from `motion/loop_spec.example.json`: canvas and fps from research (G1), allocation and tiers from the Analyst (G2), names from the Copywriter, files from the Designer.
 - Write `motion/stage_storyboard_v1.md`: rotation order (R3), transition per category (R7), ambient motion per slide (R9), sponsor ordering that avoids competitor adjacency (R12).
-- Produce placeholder animatics: `node motion/render_loop.js motion/loop_spec.json --placeholders --scale 0.25 --formats mp4`.
+- Produce placeholder animatics: `node motion/render_loop.js motion/loop_spec.json --placeholders --preview`.
 - After Playback QA passes, write `motion/stage_delivery_note.md` (files, codecs, frame count, loop length, checksums, the note that the file starts d frames into the Main hold).
 
 Rules:

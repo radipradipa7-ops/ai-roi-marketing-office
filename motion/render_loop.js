@@ -7,7 +7,8 @@
 //
 //   node motion/render_loop.js <spec.json> --plan            # timing table only, no rendering
 //   node motion/render_loop.js <spec.json> --placeholders    # render with labelled placeholder cards
-//   node motion/render_loop.js <spec.json> --scale 0.25      # quick low-res preview
+//   node motion/render_loop.js <spec.json> --preview         # fast preview: quarter size, H.264 only
+//   node motion/render_loop.js <spec.json> --scale 0.25      # low-res render in the chosen formats
 //   node motion/render_loop.js <spec.json> --formats prores,mp4,hap
 //   node motion/render_loop.js --doctor                       # check ffmpeg/ffprobe and codecs
 //
@@ -197,17 +198,35 @@ function render(plan, spec, opts) {
     }
   }
 
+  // Still images are composited onto the background ONCE (scaled into the safe area), then held in
+  // memory with the loop filter. Re-scaling every frame of every slide is what made renders slow.
+  const isVideo = (f) => /\.(mov|mp4|mkv|webm)$/i.test(f);
+  const prepped = new Map();
+  for (const s of slides) {
+    if (isVideo(s.src) || prepped.has(s.src)) continue;
+    const out = path.join(workDir, 'prepped', `${slug(path.basename(s.src))}_${prepped.size}_${W}x${H}.png`);
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', s.src, '-filter_complex',
+      `color=c=${bg}:s=${W}x${H}[bg];[0:v]scale=${SW}:${SH}:force_original_aspect_ratio=decrease:flags=lanczos,format=rgba[lg];[bg][lg]overlay=(W-w)/2:(H-h)/2:shortest=1,format=rgb24`,
+      '-frames:v', '1', out]);
+    prepped.set(s.src, out);
+  }
+  const pixfmt = opts.preview ? 'yuv420p' : 'yuv444p';
   const all = [...slides, { ...slides[0], copy: true }]; // S0 again at the end, for the seamless wrap
   const args = ['-hide_banner', '-loglevel', 'error', '-y'];
   for (const s of all) {
-    if (/\.(mov|mp4|mkv|webm)$/i.test(s.src)) args.push('-stream_loop', '-1', '-i', s.src);
-    else args.push('-loop', '1', '-framerate', String(fps), '-i', s.src);
+    if (isVideo(s.src)) args.push('-stream_loop', '-1', '-i', s.src);
+    else args.push('-i', prepped.get(s.src));
   }
   const g = [];
   all.forEach((s, i) => {
-    g.push(`color=c=${bg}:s=${W}x${H}:r=${fps},trim=end_frame=${s.clip}[bg${i}]`);
-    g.push(`[${i}:v]fps=${fps},scale=${SW}:${SH}:force_original_aspect_ratio=decrease:flags=lanczos,format=rgba[lg${i}]`);
-    g.push(`[bg${i}][lg${i}]overlay=(W-w)/2:(H-h)/2:shortest=1,format=yuv444p,setsar=1,trim=end_frame=${s.clip},setpts=PTS-STARTPTS[s${i}]`);
+    if (isVideo(s.src)) {
+      g.push(`color=c=${bg}:s=${W}x${H}:r=${fps},trim=end_frame=${s.clip}[bg${i}]`);
+      g.push(`[${i}:v]fps=${fps},scale=${SW}:${SH}:force_original_aspect_ratio=decrease:flags=lanczos,format=rgba[lg${i}]`);
+      g.push(`[bg${i}][lg${i}]overlay=(W-w)/2:(H-h)/2:shortest=1,format=${pixfmt},setsar=1,trim=end_frame=${s.clip},setpts=PTS-STARTPTS[s${i}]`);
+    } else {
+      g.push(`[${i}:v]format=${pixfmt},setsar=1,loop=loop=${s.clip - 1}:size=1:start=0,settb=1/${fps},setpts=N,fps=${fps},trim=end_frame=${s.clip}[s${i}]`);
+    }
   });
   const trFor = (s) => {
     const t = (spec.transition.byCategory || {})[s.cat] || spec.transition.type || 'fade';
@@ -223,14 +242,14 @@ function render(plan, spec, opts) {
   }
   const a = d; // cut point: d frames into S0, clear of both fades
   g.push(`[${cur}]split=${formats.length + 1}${formats.map((_, i) => `[o${i}]`).join('')}[chk]`);
-  formats.forEach((_, i) => g.push(`[o${i}]trim=start_frame=${a}:end_frame=${a + P},setpts=PTS-STARTPTS[out${i}]`));
+  formats.forEach((_, i) => g.push(`[o${i}]trim=start_frame=${a}:end_frame=${a + P},setpts=PTS-STARTPTS,fps=${fps}[out${i}]`));
   g.push(`[chk]select='eq(n\\,${a})+eq(n\\,${a + P})',setpts=N/(${fps}*TB)[seam]`);
   args.push('-filter_complex', g.join(';'));
   const outputs = [];
   formats.forEach((f, i) => {
     const base = path.join(outDir, `${name}_${W}x${H}_${fps}p`);
     if (f === 'prores') { outputs.push(base + '_prores422hq.mov'); args.push('-map', `[out${i}]`, '-c:v', 'prores_ks', '-profile:v', '3', '-vendor', 'apl0', '-pix_fmt', 'yuv422p10le', '-r', String(fps), outputs.at(-1)); }
-    else if (f === 'mp4') { outputs.push(base + '_h264.mp4'); args.push('-map', `[out${i}]`, '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', String(fps), '-r', String(fps), '-movflags', '+faststart', outputs.at(-1)); }
+    else if (f === 'mp4') { outputs.push(base + (opts.preview ? '_preview' : '') + '_h264.mp4'); args.push('-map', `[out${i}]`, '-c:v', 'libx264', '-preset', opts.preview ? 'veryfast' : 'medium', '-crf', opts.preview ? '20' : '14', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', String(fps), '-r', String(fps), '-movflags', '+faststart', outputs.at(-1)); }
     else if (f === 'hap') { outputs.push(base + '_hapq.mov'); args.push('-map', `[out${i}]`, '-c:v', 'hap', '-format', 'hap_q', '-r', String(fps), outputs.at(-1)); }
     else fail(`Unknown format "${f}" (use prores, mp4, hap)`);
   });
@@ -304,4 +323,5 @@ try { spec = JSON.parse(fs.readFileSync(specFile, 'utf8')); } catch (e) { fail(`
 const plan = buildPlan(spec);
 printPlan(plan, spec);
 if (flag('--plan')) process.exit(0);
-render(plan, spec, { placeholders: flag('--placeholders'), scale: opt('--scale'), formats: opt('--formats'), out: opt('--out'), name: opt('--name') });
+const preview = flag('--preview'); // fast look: quarter size, H.264 only, quick encoder settings
+render(plan, spec, { placeholders: flag('--placeholders'), preview, scale: opt('--scale', preview ? '0.25' : undefined), formats: opt('--formats', preview ? 'mp4' : undefined), out: opt('--out'), name: opt('--name') });

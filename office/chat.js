@@ -120,6 +120,7 @@ class Chat {
       '--permission-mode', s.permissionMode, '--max-turns', String(s.maxTurns)];
     if (s.allowedTools && s.allowedTools.length) args.push('--allowedTools', s.allowedTools.join(','));
     if (s.systemPrompt) args.push('--append-system-prompt', s.systemPrompt);
+    if (s.model && /^[\w.-]{1,60}$/.test(s.model)) args.push('--model', s.model); // optional, e.g. "sonnet" for faster replies
     if (this.state.sessionId && /^[0-9a-f-]{36}$/i.test(this.state.sessionId)) args.push('--resume', this.state.sessionId);
 
     const env = { ...process.env };
